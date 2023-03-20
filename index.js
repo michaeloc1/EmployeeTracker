@@ -52,7 +52,8 @@ const db = mysql.createConnection(
             case 'View All Roles':
                   viewRoles();
                   break;
-            case 'Add A Roll':
+            case 'Add A Role':
+                  console.log("in add roles")
                   addRoles();
                   break;
             case 'View All Departments':
@@ -68,7 +69,7 @@ const db = mysql.createConnection(
       }
 
       const viewEmployees = () => {
-        const makeQuery = `select e.first_name, e.last_name, role.title, department.name, role.salary, m.first_name as manager_first, m.last_name AS manager_last
+        const makeQuery = `select e.id, e.first_name, e.last_name, role.title, department.name, role.salary, m.first_name as manager_first, m.last_name AS manager_last
         from employee e
         join role on e.role_id = role.id
         join department on role.department_id = department.id
@@ -210,7 +211,7 @@ const db = mysql.createConnection(
 
     }
     const viewRoles = () => {
-      const makeQuery = `SELECT r.title, r.salary, d.name as department_name
+      const makeQuery = `SELECT r.id, r.title, r.salary, d.name as department_name
                         FROM role r
                         JOIN department d ON r.department_id = d.id`
 
@@ -222,6 +223,93 @@ const db = mysql.createConnection(
                 console.table(results)
                 inquirerLoop();
             });
+    }
+
+    const addRoles = () => {
+          const departmentList =[];
+          db.query('select name from department', function (err, results) {
+            if(err){
+              console.log(err)
+            }
+            else{
+              for(let i = 0; i < results.length; i++){
+                  departmentList.push(results[i].name);
+            }
+            const questions = [
+              {
+                type: 'input',
+                name: 'role',
+                message: 'What is the name of the new Role?'
+              },
+              {
+                type: 'input',
+                name: 'salary',
+                message: 'What will be the salary of the new Role'
+              },
+              {
+                type: 'list',
+                name: 'department',
+                message: 'What Department will this Role be part of?',
+                choices: departmentList
+              }
+            ]
+            inquirer
+              .prompt(questions).then((data) => {
+                const makeQuery = `INSERT INTO role(title, salary, department_id)
+                                  VALUES('${data.role}', '${data.salary}', 
+                                  (SELECT id FROM department WHERE name = '${data.department}')
+                                  )`
+
+        db.query(makeQuery, function (err, results) {
+        if(err){
+            console.log(err)
+        }
+        else
+        inquirerLoop();
+    });
+
+            })
+          }
+           
+          });
+
+    }
+
+    const viewDepartments = () => {
+      const makeQuery = 'SELECT id, name FROM department'
+      db.query(makeQuery, function (err, results) {
+        if(err){
+            console.log(err)
+        }
+        else
+        console.table(results)
+        inquirerLoop();
+    });
+
+    }
+
+    const addDepartment = () => {
+      const questions = [
+        {
+          type: 'input',
+          name: 'name',
+          message: 'What will be the name of the new Department?'
+        }
+      ]
+      inquirer
+      .prompt(questions).then((data) => {
+        const makeQuery = `INSERT INTO department(name)
+        VALUES ('${data.name}')`
+        db.query(makeQuery, function (err, results) {
+          if(err){
+              console.log(err)
+          }
+          else
+          viewDepartments();
+          inquirerLoop();
+      });
+
+      })
     }
 
       inquirerLoop();
