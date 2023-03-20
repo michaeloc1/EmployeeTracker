@@ -24,6 +24,7 @@ const db = mysql.createConnection(
           'View All Employees',
           'Add Employee',
           'Update Employee Role',
+          'Delete an Employee',
           'View All Roles',
           'Add A Role',
           'View All Departments',
@@ -61,6 +62,9 @@ const db = mysql.createConnection(
                   break;
             case 'Add A Department':
                   addDepartment();
+                  break;
+            case 'Delete an Employee':
+                  deleteEmployee()
                   break;
 
         }
@@ -311,6 +315,64 @@ const db = mysql.createConnection(
 
       })
     }
+
+    const deleteEmployee = () => {
+      const employeeList = []
+      db.query('select first_name, last_name from employee', function (err, results) {
+        for(let i = 0; i < results.length; i++){
+            employeeList.push(`${results[i].first_name} ${results[i].last_name}`)
+        }
+
+      });
+      const questions = [
+        {
+          type: 'input',
+          name: 'test',
+          message: 'test'
+        },
+        {
+          type: 'list',
+          name: 'employee',
+          message: 'What employee do you want to delete?',
+          choices: employeeList
+        }
+      ]
+      inquirer
+        .prompt(questions).then((data) => {
+          const fullname = data.employee;
+          const names = fullname.split(' ');
+          const strfirstName = names[0];
+          const strlastName = names[1];
+
+          const makeQuery = `select manager_id
+                            from employee
+                            where first_name = '${strfirstName}' and last_name = '${strlastName}'`
+
+          db.query(makeQuery, function (err, results) {
+            if(err){
+                console.log(err)
+            }
+            else{
+              //console.log(results[0].manager_id)
+                if(results[0].manager_id === null){
+                  
+                    console.log("This employee is a manager to other employee's and cant be deleted")
+                }
+                else{
+                  const makeQuery = `DELETE FROM employee WHERE first_name = '${strfirstName}' and last_name = '${strlastName}'`
+                    db.promise().query(makeQuery).then(function(results) {
+                      viewEmployees();
+
+                      }).catch(err => console.log(err));
+                }
+            }
+            inquirerLoop()
+        });
+
+
+        })
+    }
+
 
       inquirerLoop();
 
