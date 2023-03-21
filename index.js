@@ -24,6 +24,7 @@ const db = mysql.createConnection(
           'View All Employees',
           'Add Employee',
           'Update Employee Role',
+          'Change Employee Manager',
           'Delete an Employee',
           'View All Roles',
           'Add A Role',
@@ -65,6 +66,9 @@ const db = mysql.createConnection(
                   break;
             case 'Delete an Employee':
                   deleteEmployee()
+                  break;
+            case 'Change Employee Manager':
+                  changeEmployeeManager();
                   break;
 
         }
@@ -146,6 +150,7 @@ const db = mysql.createConnection(
                     console.log(err)
                 }
                 else
+                viewEmployees();
                 inquirerLoop();
             });
         })
@@ -344,35 +349,116 @@ const db = mysql.createConnection(
           const strfirstName = names[0];
           const strlastName = names[1];
 
-          const makeQuery = `select manager_id
-                            from employee
-                            where first_name = '${strfirstName}' and last_name = '${strlastName}'`
-
+          let makeQuery = `SELECT id FROM employee WHERE first_name = '${strfirstName}' and last_name = '${strlastName}'`
           db.query(makeQuery, function (err, results) {
             if(err){
                 console.log(err)
             }
-            else{
-              //console.log(results[0].manager_id)
-                if(results[0].manager_id === null){
-                  
-                    console.log("This employee is a manager to other employee's and cant be deleted")
+          else{
+            makeQuery = `SELECT COUNT (*) FROM employee WHERE manager_id = '${results[0].id}'`
+            db.query(makeQuery, function (err, results) {
+              if(err){
+                  console.log(err)
+              }
+              else{
+                let countVal = Object.values(results[0])
+                countVal = countVal[0]
+                console.log(countVal)
+                if(countVal > 0){
+                  console.log("This employee is a manager of other employees and cant be deleted")
                 }
                 else{
-                  const makeQuery = `DELETE FROM employee WHERE first_name = '${strfirstName}' and last_name = '${strlastName}'`
-                    db.promise().query(makeQuery).then(function(results) {
-                      viewEmployees();
+                  makeQuery = `DELETE FROM employee WHERE first_name = '${strfirstName}' AND last_name = '${strlastName}'`
+                  db.query(makeQuery, function (err, results) {
+                    if(err){
+                        console.log(err)
+                    }
+                    else{
+                      
+                    }
 
-                      }).catch(err => console.log(err));
+                });
                 }
-            }
-            inquirerLoop()
+              }
+              viewEmployees();
+              inquirerLoop();
+          });
+          
+          }
+
         });
 
 
-        })
-    }
+      });
+      
+      }
 
+    const changeEmployeeManager= () => {
+      const employeeList = []
+      const managerList = []
+      db.query('select first_name, last_name from employee', function (err, results) {
+        for(let i = 0; i < results.length; i++){
+            employeeList.push(`${results[i].first_name} ${results[i].last_name}`)
+        }
+
+      });
+      db.query('select first_name, last_name from employee', function (err, results) {
+        for(let i = 0; i < results.length; i++){
+            managerList.push(`${results[i].first_name} ${results[i].last_name}`)
+        }
+
+      });
+
+      const questions = [
+        {
+          type: 'input',
+          name: 'test',
+          message: 'test'
+        },
+        {
+          type: 'list',
+          name: 'employee',
+          message: 'What employee do you want to update Manager?',
+          choices: employeeList
+        },
+        {
+          type: 'list',
+          name: 'manager',
+          message: 'Who do you want to be the manager?',
+          choices: managerList
+        }
+      ]
+      inquirer
+      .prompt(questions).then((data) => {
+          const fullname = data.employee;
+          const names = fullname.split(' ');
+          const strfirstName = names[0];
+          const strlastName = names[1];
+
+          const mgrfullname = data.manager;
+          const mgrnames = mgrfullname.split(' ');
+          const mgrstrfirstName = mgrnames[0];
+          const mgrstrlastName = mgrnames[1];
+          
+
+
+          
+       const makeQuery = `UPDATE employee e
+       JOIN employee m
+       SET e.manager_id = m.id
+       WHERE m.first_name = '${mgrstrfirstName}' and m.last_name = '${mgrstrlastName}'
+       AND e.first_name = '${strfirstName}' AND  e.last_name = '${strlastName}'`
+     
+        db.query(makeQuery, function (err, results) {
+        if(err){
+            console.log(err)
+        }
+        else
+        viewEmployees();
+        inquirerLoop();
+    });
+      })
+    }
 
       inquirerLoop();
 
