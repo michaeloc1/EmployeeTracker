@@ -29,7 +29,8 @@ const db = mysql.createConnection(
           'View All Roles',
           'Add A Role',
           'View All Departments',
-          'Add A Department'
+          'Add A Department',
+          'View Budget by Department'
         ]
        }
     ]
@@ -70,7 +71,9 @@ const db = mysql.createConnection(
             case 'Change Employee Manager':
                   changeEmployeeManager();
                   break;
-
+            case 'View Budget by Department':
+                viewDepartmentBudget() 
+                break;           
         }
         //inquirerLoop();
 
@@ -151,7 +154,7 @@ const db = mysql.createConnection(
                 }
                 else
                 viewEmployees();
-                inquirerLoop();
+               // inquirerLoop();
             });
         })
 
@@ -211,7 +214,7 @@ const db = mysql.createConnection(
               }
               else
               viewEmployees();
-              inquirerLoop();
+             // inquirerLoop();
           });
         
       })
@@ -273,8 +276,10 @@ const db = mysql.createConnection(
         if(err){
             console.log(err)
         }
-        else
-        inquirerLoop();
+        else{
+          viewRoles()
+       // inquirerLoop();
+        }
     });
 
             })
@@ -315,7 +320,7 @@ const db = mysql.createConnection(
           }
           else
           viewDepartments();
-          inquirerLoop();
+          //inquirerLoop();
       });
 
       })
@@ -381,7 +386,7 @@ const db = mysql.createConnection(
                 }
               }
               viewEmployees();
-              inquirerLoop();
+              //inquirerLoop();
           });
           
           }
@@ -455,9 +460,24 @@ const db = mysql.createConnection(
         }
         else
         viewEmployees();
-        inquirerLoop();
+        //inquirerLoop();
     });
       })
+    }
+
+    const viewDepartmentBudget = () => {
+      const makeQuery = `select d.id,  d.name as department_name, COALESCE(sum(r.salary), 0) as budget from role r
+      join employee e on e.role_id = r.id
+      right join department d on d.id = r.department_id
+      group by d.id`
+      db.query(makeQuery, function (err, results) {
+        if(err){
+            console.log(err)
+        }
+        else
+        console.table(results)
+        inquirerLoop();
+    });
     }
 
       inquirerLoop();
