@@ -30,7 +30,10 @@ const db = mysql.createConnection(
           'Add A Role',
           'View All Departments',
           'Add A Department',
-          'View Budget by Department'
+          'View Budget by Department',
+          'View Employees by Manager',
+          'test'
+
         ]
        }
     ]
@@ -72,8 +75,15 @@ const db = mysql.createConnection(
                   changeEmployeeManager();
                   break;
             case 'View Budget by Department':
-                viewDepartmentBudget() 
-                break;           
+                  viewDepartmentBudget() 
+                  break;
+            case 'View Employees by Manager':
+                  viewEmpByMan();
+                  break;
+
+            case 'test':
+              testFunc()  
+              break;          
         }
         //inquirerLoop();
 
@@ -93,18 +103,21 @@ const db = mysql.createConnection(
 
       const addEmployee = () => {
         let roleTitles = [];
-        let managerList = ['none'];
-        db.query('select title from role', function (err, results) {
+        let managerList = [{name: 'none', value: null}];
+        db.query('select id, title from role', function (err, results) {
             for(let i = 0; i < results.length; i++){
-                roleTitles.push(results[i].title)
+              const roleObj = {name: results[i].title, value: results[i].id}
+
+                roleTitles.push(roleObj)
             }
-           // console.log(roleTitles)
+           
           });
-          db.query('select first_name, last_name from employee', function (err, results) {
+          db.query('select id, first_name, last_name from employee', function (err, results) {
             for(let i = 0; i < results.length; i++){
-                managerList.push(`${results[i].first_name} ${results[i].last_name}`)
+              const empObj = {name: results[i]. first_name + ' ' + results[i].last_name, value: results[i].id}
+              managerList.push(empObj)
             }
-           // console.log(roleTitles)
+          
           });
 
           const questions = [
@@ -133,20 +146,8 @@ const db = mysql.createConnection(
           ]
         inquirer
         .prompt(questions).then((data) => {
-            const fullname = data.manager
-            const names = fullname.split(' ');
-            const strfirstName = names[0];
-            const strlastName = names[1];
-            
             const makeQuery = `INSERT INTO employee(first_name, last_name, role_id, manager_id)
-            VALUES('${data.firstName}', '${data.lastName}',
-            (SELECT id FROM role WHERE title = '${data.roles}'), 
-            (SELECT e.id
-            FROM   employee e
-            LEFT JOIN   employee m on e.manager_id = m.id 
-            WHERE e.first_name = '${strfirstName}' AND e.last_name = '${strlastName}')
-            
-            )`
+                              VALUES('${data.firstName}', '${data.lastName}', ${data.roles}, ${data.manager})`
 
             db.query(makeQuery, function (err, results) {
                 if(err){
@@ -161,19 +162,26 @@ const db = mysql.createConnection(
     }
 
     const changeEmployeeRole = () => {
+      
       let roleTitles = [];
       let employeeList = [];
-      db.query('select title from role', function (err, results) {
+      db.query('select id, title from role', function (err, results) {
         for(let i = 0; i < results.length; i++){
-           roleTitles.push(results[i].title)
-        }
-      });
-      db.query('select first_name, last_name from employee', function (err, results) {
-        for(let i = 0; i < results.length; i++){
-            employeeList.push(`${results[i].first_name} ${results[i].last_name}`)
-        }
+          const roleObj = {name: results[i].title, value: results[i].id}
 
+            roleTitles.push(roleObj)
+        }
+       
       });
+      db.query('select id, first_name, last_name from employee', function (err, results) {
+        for(let i = 0; i < results.length; i++){
+          const empObj = {name: results[i]. first_name + ' ' + results[i].last_name, value: results[i].id}
+          employeeList.push(empObj)
+        }
+      
+      });
+
+      
 
       const questions = [
         {
@@ -195,18 +203,12 @@ const db = mysql.createConnection(
         }
       ]
 
+
       inquirer
       .prompt(questions).then((data) => {
-        const fullname = data.employee;
-        const names = fullname.split(' ');
-        const strfirstName = names[0];
-        const strlastName = names[1];
-
-        const makeQuery = `UPDATE employee e
-            JOIN role r
-            SET e.role_id = r.id
-            WHERE r.title = '${data.roles}'
-            AND e.first_name = '${strfirstName}' AND  e.last_name = '${strlastName}'`
+           const makeQuery = `UPDATE employee
+                              SET role_id = ${data.roles}
+                              WHERE id = ${data.employee}`
 
             db.query(makeQuery, function (err, results) {
               if(err){
@@ -239,14 +241,15 @@ const db = mysql.createConnection(
 
     const addRoles = () => {
           const departmentList =[];
-          db.query('select name from department', function (err, results) {
+          db.query('select id, name from department', function (err, results) {
             if(err){
               console.log(err)
             }
             else{
               for(let i = 0; i < results.length; i++){
-                  departmentList.push(results[i].name);
-            }
+                const deptObj = {name: results[i].name, value: results[i].id}
+                departmentList.push(deptObj)
+              }
             const questions = [
               {
                 type: 'input',
@@ -267,10 +270,8 @@ const db = mysql.createConnection(
             ]
             inquirer
               .prompt(questions).then((data) => {
-                const makeQuery = `INSERT INTO role(title, salary, department_id)
-                                  VALUES('${data.role}', '${data.salary}', 
-                                  (SELECT id FROM department WHERE name = '${data.department}')
-                                  )`
+                  const makeQuery = `INSERT INTO role(title, salary, department_id)
+                                    VALUES('${data.role}', ${data.salary}, ${data.department})`
 
         db.query(makeQuery, function (err, results) {
         if(err){
@@ -338,7 +339,7 @@ const db = mysql.createConnection(
         {
           type: 'input',
           name: 'test',
-          message: 'test'
+          message: 'Press enter to continue'
         },
         {
           type: 'list',
@@ -400,69 +401,59 @@ const db = mysql.createConnection(
 
     const changeEmployeeManager= () => {
       const employeeList = []
-      const managerList = []
-      db.query('select first_name, last_name from employee', function (err, results) {
+      const managerList = [{name: 'none', value: null}];
+      db.query('select id, first_name, last_name from employee', function (err, results) {
         for(let i = 0; i < results.length; i++){
-            employeeList.push(`${results[i].first_name} ${results[i].last_name}`)
+          const empObj = {name: results[i]. first_name + ' ' + results[i].last_name, value: results[i].id}
+          employeeList.push(empObj)
         }
+      
 
       });
-      db.query('select first_name, last_name from employee', function (err, results) {
+      db.query('select id, first_name, last_name from employee', function (err, results) {
         for(let i = 0; i < results.length; i++){
-            managerList.push(`${results[i].first_name} ${results[i].last_name}`)
+          const empObj = {name: results[i]. first_name + ' ' + results[i].last_name, value: results[i].id}
+          managerList.push(empObj)
         }
+        const questions = [
 
+          //{
+           // type: 'input',
+           // name: 'test',
+           // message: 'test'
+          //},
+          {
+            type: 'list',
+            name: 'employee',
+            message: 'What employee do you want to update Manager?',
+            choices: employeeList
+          },
+          {
+            type: 'list',
+            name: 'manager',
+            message: 'Who do you want to be the manager?',
+            choices: managerList
+          }
+        ]
+        inquirer
+        .prompt(questions).then((data) => {
+         const makeQuery = `UPDATE employee
+                            SET manager_id = ${data.manager}
+                            WHERE id = ${data.employee}`
+       
+          db.query(makeQuery, function (err, results) {
+          if(err){
+              console.log(err)
+          }
+          else{
+          viewEmployees();
+          }
       });
-
-      const questions = [
-        {
-          type: 'input',
-          name: 'test',
-          message: 'test'
-        },
-        {
-          type: 'list',
-          name: 'employee',
-          message: 'What employee do you want to update Manager?',
-          choices: employeeList
-        },
-        {
-          type: 'list',
-          name: 'manager',
-          message: 'Who do you want to be the manager?',
-          choices: managerList
-        }
-      ]
-      inquirer
-      .prompt(questions).then((data) => {
-          const fullname = data.employee;
-          const names = fullname.split(' ');
-          const strfirstName = names[0];
-          const strlastName = names[1];
-
-          const mgrfullname = data.manager;
-          const mgrnames = mgrfullname.split(' ');
-          const mgrstrfirstName = mgrnames[0];
-          const mgrstrlastName = mgrnames[1];
-          
+        })
+       });
 
 
-          
-       const makeQuery = `UPDATE employee e
-       JOIN employee m
-       SET e.manager_id = m.id
-       WHERE m.first_name = '${mgrstrfirstName}' and m.last_name = '${mgrstrlastName}'
-       AND e.first_name = '${strfirstName}' AND  e.last_name = '${strlastName}'`
-     
-        db.query(makeQuery, function (err, results) {
-        if(err){
-            console.log(err)
-        }
-        else
-        viewEmployees();
-        //inquirerLoop();
-    });
-      })
+
     }
 
     const viewDepartmentBudget = () => {
@@ -479,6 +470,86 @@ const db = mysql.createConnection(
         inquirerLoop();
     });
     }
+
+    const testFunc = () => {
+
+      const employeeList = []
+      db.query('select id, first_name, last_name from employee', function (err, results) {
+      // const employeeList = results.map(({ id, first_name, last_name }) => ({ name: first_name + " "+ last_name, value: id }));
+      const employeeList = []
+      for(let i = 0; i < results.length; i++){
+        const empObj = {name: results[i]. first_name + ' ' + results[i].last_name, value: results[i].id}
+        employeeList.push(empObj)
+      }
+      
+       const questions = [
+        {type: 'list',
+        name: 'employees',
+        message: 'Choose employee',
+        choices: employeeList
+      },
+        {type: 'list',
+        name: 'managers',
+        message: 'Choose employee',
+        choices: employeeList
+      }
+       ]
+        inquirer
+        .prompt(questions).then((data) => {
+          console.log(data)
+  
+  
+        })
+
+        
+
+      });
+
+    
+  }
+
+  const viewEmpByMan = () => {
+
+    db.query('SELECT first_name, last_name, id FROM employee WHERE (id IN (SELECT manager_id FROM employee));', function (err, results) {
+    // const employeeList = results.map(({ id, first_name, last_name }) => ({ name: first_name + " "+ last_name, value: id }));
+    const managerList = []
+    for(let i = 0; i < results.length; i++){
+      const empObj = {name: results[i]. first_name + ' ' + results[i].last_name, value: results[i].id}
+      managerList.push(empObj)
+    }
+    
+     const questions = [
+
+      {type: 'list',
+      name: 'manager',
+      message: 'Choose a manager to see their employees',
+      choices: managerList
+    },
+
+     ]
+      inquirer
+      .prompt(questions).then((data) => {
+        makeQuery = `select e.id, e.first_name, e.last_name, role.title, role.salary from employee e
+        join role on e.role_id = role.id
+        WHERE e.manager_id = ${data.manager}`
+      db.query(makeQuery, function (err, results) {
+      if(err){
+      console.log(err)
+      }
+      else
+      console.table(results)
+      inquirerLoop();
+      });
+
+
+      })
+
+
+    });
+
+  }
+
+  
 
       inquirerLoop();
 
