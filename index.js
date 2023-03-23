@@ -13,7 +13,7 @@ const db = mysql.createConnection(
     },
     console.log(`Connected to the employee_tracker_db database.`)
   );
-  
+  //loop through list of tasks 
   function inquirerLoop(){
     const questions = [ 
         {
@@ -26,6 +26,7 @@ const db = mysql.createConnection(
           'Update Employee Role',
           'Change Employee Manager',
           'Delete an Employee',
+          'View Employees by Manager',
           'View All Roles',
           'Add A Role',
           'Delete a Role',
@@ -33,10 +34,7 @@ const db = mysql.createConnection(
           'Add A Department',
           'Delete A Department',
           'View Budget by Department',
-          'View Employees by Manager',
-          'test'
-
-        ]
+         ]
        }
     ]
     inquirer
@@ -87,15 +85,11 @@ const db = mysql.createConnection(
             case 'Delete A Department':
                   deleteDepartment();
                   break;            
-
-            case 'test':
-              testFunc()  
-              break;          
         }
-        //inquirerLoop();
+
 
       }
-
+      //view all employees
       const viewEmployees = () => {
         const makeQuery = `select e.id, e.first_name, e.last_name, role.title, department.name, role.salary, m.first_name as manager_first, m.last_name AS manager_last
         from employee e
@@ -107,7 +101,7 @@ const db = mysql.createConnection(
             inquirerLoop()
           });
       }
-
+      //add an employee
       const addEmployee = () => {
         let roleTitles = [];
         let managerList = [{name: 'none', value: null}];
@@ -124,50 +118,52 @@ const db = mysql.createConnection(
               const empObj = {name: results[i]. first_name + ' ' + results[i].last_name, value: results[i].id}
               managerList.push(empObj)
             }
+
+            const questions = [
+              {
+                  type: 'input',
+                  name: 'firstName',
+                  message: 'What is the employees first name?'
+              },
+              {
+                  type: 'input',
+                  name: 'lastName',
+                  message: 'What is the employees last name?'
+              },
+              {
+                  type: 'list',
+                  name: 'roles',
+                  message: 'What is the employees role?',
+                  choices: roleTitles
+              },
+              {
+                  type: 'list',
+                  name: 'manager',
+                  message: "Who will be the employees manager?",
+                  choices: managerList
+              }
+            ]
+          inquirer
+          .prompt(questions).then((data) => {
+              const makeQuery = `INSERT INTO employee(first_name, last_name, role_id, manager_id)
+                                VALUES('${data.firstName}', '${data.lastName}', ${data.roles}, ${data.manager})`
+  
+              db.query(makeQuery, function (err, results) {
+                  if(err){
+                      console.log(err)
+                  }
+                  else
+                  viewEmployees();
+                 
+              });
           
           });
 
-          const questions = [
-            {
-                type: 'input',
-                name: 'firstName',
-                message: 'What is the employees first name?'
-            },
-            {
-                type: 'input',
-                name: 'lastName',
-                message: 'What is the employees last name?'
-            },
-            {
-                type: 'list',
-                name: 'roles',
-                message: 'What is the employees role?',
-                choices: roleTitles
-            },
-            {
-                type: 'list',
-                name: 'manager',
-                message: "Who will be the employees manager?",
-                choices: managerList
-            }
-          ]
-        inquirer
-        .prompt(questions).then((data) => {
-            const makeQuery = `INSERT INTO employee(first_name, last_name, role_id, manager_id)
-                              VALUES('${data.firstName}', '${data.lastName}', ${data.roles}, ${data.manager})`
 
-            db.query(makeQuery, function (err, results) {
-                if(err){
-                    console.log(err)
-                }
-                else
-                viewEmployees();
-               // inquirerLoop();
-            });
         })
 
     }
-
+    //change the role of an employee
     const changeEmployeeRole = () => {
       
       let roleTitles = [];
@@ -185,52 +181,50 @@ const db = mysql.createConnection(
           const empObj = {name: results[i]. first_name + ' ' + results[i].last_name, value: results[i].id}
           employeeList.push(empObj)
         }
+
+        const questions = [
+          {
+              type: 'list',
+              name: 'employee',
+              message: 'What is the employees name?',
+              choices: employeeList
+          },
+          {
+              type: 'list',
+              name: 'roles',
+              message: "What will be their new role?",
+              choices: roleTitles
+          }
+        ]
+  
+  
+        inquirer
+        .prompt(questions).then((data) => {
+             const makeQuery = `UPDATE employee
+                                SET role_id = ${data.roles}
+                                WHERE id = ${data.employee}`
+  
+              db.query(makeQuery, function (err, results) {
+                if(err){
+                    console.log(err)
+                }
+                else
+                viewEmployees();
+               
+            });
       
       });
 
       
 
-      const questions = [
-        {
-          type: 'input',
-          name: 'test',
-          message: 'test'
-        },
-        {
-            type: 'list',
-            name: 'employee',
-            message: 'What is the employees name?',
-            choices: employeeList
-        },
-        {
-            type: 'list',
-            name: 'roles',
-            message: "What will be their new role?",
-            choices: roleTitles
-        }
-      ]
 
-
-      inquirer
-      .prompt(questions).then((data) => {
-           const makeQuery = `UPDATE employee
-                              SET role_id = ${data.roles}
-                              WHERE id = ${data.employee}`
-
-            db.query(makeQuery, function (err, results) {
-              if(err){
-                  console.log(err)
-              }
-              else
-              viewEmployees();
-             // inquirerLoop();
-          });
         
       })
       
 
 
     }
+    //view all roles
     const viewRoles = () => {
       const makeQuery = `SELECT r.id, r.title, r.salary, d.name as department_name
                         FROM role r
@@ -245,7 +239,7 @@ const db = mysql.createConnection(
                 inquirerLoop();
             });
     }
-
+    //add a role
     const addRoles = () => {
           const departmentList =[];
           db.query('select id, name from department', function (err, results) {
@@ -253,7 +247,7 @@ const db = mysql.createConnection(
               console.log(err)
             }
             else{
-              for(let i = 0; i < results.length; i++){
+                for(let i = 0; i < results.length; i++){
                 const deptObj = {name: results[i].name, value: results[i].id}
                 departmentList.push(deptObj)
               }
@@ -288,7 +282,7 @@ const db = mysql.createConnection(
           viewRoles()
        // inquirerLoop();
         }
-    });
+          });
 
             })
           }
@@ -296,7 +290,7 @@ const db = mysql.createConnection(
           });
 
     }
-
+    //view all departments
     const viewDepartments = () => {
       const makeQuery = 'SELECT id, name FROM department'
       db.query(makeQuery, function (err, results) {
@@ -309,7 +303,7 @@ const db = mysql.createConnection(
     });
 
     }
-
+    //add a department
     const addDepartment = () => {
       const questions = [
         {
@@ -333,7 +327,7 @@ const db = mysql.createConnection(
 
       })
     }
-
+    //delete employee.  Won't allow delete if employee is a manager of other employees
     const deleteEmployee = () => {
       const employeeList = [];
       db.query('select id, first_name, last_name from employee', function (err, results) {
@@ -383,7 +377,7 @@ const db = mysql.createConnection(
       });
       
       }
-
+      //change employee manager
     const changeEmployeeManager= () => {
       const employeeList = []
       const managerList = [{name: 'none', value: null}];
@@ -435,7 +429,7 @@ const db = mysql.createConnection(
 
 
     }
-
+    //view each departments budget. Calculated by adding salaries of employees in each department
     const viewDepartmentBudget = () => {
       const makeQuery = `select d.id,  d.name as department_name, COALESCE(sum(r.salary), 0) as budget from role r
       join employee e on e.role_id = r.id
@@ -450,48 +444,10 @@ const db = mysql.createConnection(
         inquirerLoop();
     });
     }
-
-    const testFunc = () => {
-
-      const employeeList = []
-      db.query('select id, first_name, last_name from employee', function (err, results) {
-      // const employeeList = results.map(({ id, first_name, last_name }) => ({ name: first_name + " "+ last_name, value: id }));
-      const employeeList = []
-      for(let i = 0; i < results.length; i++){
-        const empObj = {name: results[i]. first_name + ' ' + results[i].last_name, value: results[i].id}
-        employeeList.push(empObj)
-      }
-      
-       const questions = [
-        {type: 'list',
-        name: 'employees',
-        message: 'Choose employee',
-        choices: employeeList
-      },
-        {type: 'list',
-        name: 'managers',
-        message: 'Choose employee',
-        choices: employeeList
-      }
-       ]
-        inquirer
-        .prompt(questions).then((data) => {
-          console.log(data)
-  
-  
-        })
-
-        
-
-      });
-
-    
-  }
-
+    //view employees by manager.  Only employees who are manager to other employees show up in the list
   const viewEmpByMan = () => {
 
     db.query('SELECT first_name, last_name, id FROM employee WHERE (id IN (SELECT manager_id FROM employee));', function (err, results) {
-    // const employeeList = results.map(({ id, first_name, last_name }) => ({ name: first_name + " "+ last_name, value: id }));
     const managerList = []
     for(let i = 0; i < results.length; i++){
       const empObj = {name: results[i]. first_name + ' ' + results[i].last_name, value: results[i].id}
@@ -528,7 +484,7 @@ const db = mysql.createConnection(
     });
 
   }
-
+  //delete a role. Will not allow delete if employees are still asigned that role
     const deleteRole = () => {
       const roleTitles = [];
       db.query('select id, title from role', function (err, results) {
@@ -581,7 +537,7 @@ const db = mysql.createConnection(
 
 
     }
-
+    //delete department.  Will not allow delete if roles are still asigned to department
     const deleteDepartment = () => {
       const deptTitles = [];
       db.query('select id, name from department', function (err, results) {
@@ -635,7 +591,7 @@ const db = mysql.createConnection(
 
     }
   
-
+    //start application
       inquirerLoop();
 
   
