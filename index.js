@@ -28,8 +28,10 @@ const db = mysql.createConnection(
           'Delete an Employee',
           'View All Roles',
           'Add A Role',
+          'Delete a Role',
           'View All Departments',
           'Add A Department',
+          'Delete A Department',
           'View Budget by Department',
           'View Employees by Manager',
           'test'
@@ -59,7 +61,6 @@ const db = mysql.createConnection(
                   viewRoles();
                   break;
             case 'Add A Role':
-                  console.log("in add roles")
                   addRoles();
                   break;
             case 'View All Departments':
@@ -80,6 +81,12 @@ const db = mysql.createConnection(
             case 'View Employees by Manager':
                   viewEmpByMan();
                   break;
+            case 'Delete a Role':
+                  deleteRole();
+                  break;
+            case 'Delete A Department':
+                  deleteDepartment();
+                  break;            
 
             case 'test':
               testFunc()  
@@ -549,6 +556,111 @@ const db = mysql.createConnection(
 
   }
 
+    const deleteRole = () => {
+      const roleTitles = [];
+      db.query('select id, title from role', function (err, results) {
+        for(let i = 0; i < results.length; i++){
+          const roleObj = {name: results[i].title, value: results[i].id}
+
+            roleTitles.push(roleObj)
+        }
+        const questions = [
+
+          {type: 'list',
+          name: 'roles',
+          message: 'What role do you want to delete',
+          choices: roleTitles
+        },
+    
+         ]
+         inquirer
+         .prompt(questions).then((data) => {
+          makeQuery = `SELECT role_id FROM employee
+                      WHERE role_id = ${data.roles}` 
+        db.query(makeQuery, function (err, results) {
+          if(err){
+          console.log(err)
+          }
+          else{
+            if(results[0]){
+              console.log('This Role has employees and cannot be deleted');
+              inquirerLoop()
+            }
+            else{
+                makeQuery = `DELETE FROM role
+                            WHERE id = ${data.roles}`
+                db.query(makeQuery, function (err, results) {
+                  if(err){
+                  console.log(err)
+                  }
+                  else
+                  viewRoles();
+                  });
+            }
+          }
+          
+          });
+         })
+
+       
+      });
+
+
+
+    }
+
+    const deleteDepartment = () => {
+      const deptTitles = [];
+      db.query('select id, name from department', function (err, results) {
+        for(let i = 0; i < results.length; i++){
+          const deptObj = {name: results[i].name, value: results[i].id}
+
+            deptTitles.push(deptObj)
+        }
+        const questions = [
+
+          {type: 'list',
+          name: 'departments',
+          message: 'What department do you want to delete',
+          choices: deptTitles
+        },
+    
+         ]
+         inquirer
+         .prompt(questions).then((data) => {
+          makeQuery = `SELECT department_id from role
+                      WHERE department_id = ${data.departments}` 
+        db.query(makeQuery, function (err, results) {
+          if(err){
+          console.log(err)
+          }
+          else{
+            if(results[0]){
+              console.log('This department has roles and cannot be deleted');
+              inquirerLoop()
+            }
+            else{
+                makeQuery = `DELETE FROM department
+                            WHERE id = ${data.departments}`
+                db.query(makeQuery, function (err, results) {
+                  if(err){
+                  console.log(err)
+                  }
+                  else
+                  viewDepartments();
+                  });
+            }
+          }
+          
+          });
+         })
+
+       
+      });
+
+
+
+    }
   
 
       inquirerLoop();
