@@ -335,73 +335,51 @@ const db = mysql.createConnection(
     }
 
     const deleteEmployee = () => {
-      const employeeList = []
-      db.query('select first_name, last_name from employee', function (err, results) {
+      const employeeList = [];
+      db.query('select id, first_name, last_name from employee', function (err, results) {
         for(let i = 0; i < results.length; i++){
-            employeeList.push(`${results[i].first_name} ${results[i].last_name}`)
+          const empObj = {name: results[i]. first_name + ' ' + results[i].last_name, value: results[i].id}
+          employeeList.push(empObj)
         }
+        const questions = [
 
-      });
-      const questions = [
-        {
-          type: 'input',
-          name: 'test',
-          message: 'Press enter to continue'
-        },
-        {
-          type: 'list',
+          {type: 'list',
           name: 'employee',
-          message: 'What employee do you want to delete?',
+          message: 'What employee do you want to delete',
           choices: employeeList
-        }
-      ]
-      inquirer
-        .prompt(questions).then((data) => {
-          const fullname = data.employee;
-          const names = fullname.split(' ');
-          const strfirstName = names[0];
-          const strlastName = names[1];
-
-          let makeQuery = `SELECT id FROM employee WHERE first_name = '${strfirstName}' and last_name = '${strlastName}'`
-          db.query(makeQuery, function (err, results) {
-            if(err){
-                console.log(err)
-            }
-          else{
-            makeQuery = `SELECT COUNT (*) FROM employee WHERE manager_id = '${results[0].id}'`
-            db.query(makeQuery, function (err, results) {
-              if(err){
-                  console.log(err)
-              }
-              else{
-                let countVal = Object.values(results[0])
-                countVal = countVal[0]
-                console.log(countVal)
-                if(countVal > 0){
-                  console.log("This employee is a manager of other employees and cant be deleted")
-                }
-                else{
-                  makeQuery = `DELETE FROM employee WHERE first_name = '${strfirstName}' AND last_name = '${strlastName}'`
-                  db.query(makeQuery, function (err, results) {
-                    if(err){
-                        console.log(err)
-                    }
-                    else{
-                      
-                    }
-
-                });
-                }
-              }
-              viewEmployees();
-              //inquirerLoop();
-          });
-          
+        },
+    
+         ]
+         inquirer
+         .prompt(questions).then((data) => {
+          makeQuery = `SELECT manager_id FROM employee
+                      WHERE manager_id = ${data.employee}` 
+        db.query(makeQuery, function (err, results) {
+          if(err){
+          console.log(err)
           }
+          else{
+            if(results[0]){
+              console.log('This employee is a manager to other employees and cannot be deleted');
+              inquirerLoop()
+            }
+            else{
+                makeQuery = `DELETE FROM employee
+                            WHERE id = ${data.employee}`
+                db.query(makeQuery, function (err, results) {
+                  if(err){
+                  console.log(err)
+                  }
+                  else
+                  viewEmployees();
+                  });
+            }
+          }
+          
+          });
+         })
 
-        });
-
-
+       
       });
       
       }
@@ -424,11 +402,6 @@ const db = mysql.createConnection(
         }
         const questions = [
 
-          //{
-           // type: 'input',
-           // name: 'test',
-           // message: 'test'
-          //},
           {
             type: 'list',
             name: 'employee',
